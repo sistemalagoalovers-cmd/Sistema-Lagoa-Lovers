@@ -180,6 +180,10 @@ export default function App() {
     setTemplates(prev => [...prev, newT]);
   };
 
+  const handleUpdateTemplate = (updated: ContractTemplate) => {
+    setTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
+  };
+
   const handleDeleteTemplate = (id: string) => {
     setTemplates(prev => prev.filter(t => t.id !== id));
   };
@@ -444,7 +448,9 @@ export default function App() {
               sales={sales}
               products={products}
               onAddTemplate={handleAddTemplate}
+              onUpdateTemplate={handleUpdateTemplate}
               onDeleteTemplate={handleDeleteTemplate}
+              onSaveSale={handleSaveSale}
               onDeleteSale={handleDeleteSale}
               preSelectedReceptionId={contractPreSelectClient}
             />

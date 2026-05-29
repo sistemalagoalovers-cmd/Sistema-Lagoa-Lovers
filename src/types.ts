@@ -270,6 +270,19 @@ export interface SalesRecord {
   }>;
 }
 
+export interface FieldMapping {
+  id: string;
+  name: string;
+  page: number;
+  x: number;
+  y: number;
+  fontSize: number;
+  maxWidth?: number;
+  alignment: "left" | "center" | "right";
+  hideOriginal: boolean;
+  required: boolean;
+}
+
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -277,6 +290,9 @@ export interface ContractTemplate {
   fileName: string;
   placeholders: string[];
   content: string; // Simulation template markdown/text
+  pdfBase64?: string; // Original uploaded PDF base64
+  pdfFileName?: string; // Filename of uploaded template
+  fields?: FieldMapping[]; // Key-based coordinates mapping
 }
 
 export interface ContractRecord {
