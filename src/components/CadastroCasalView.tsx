@@ -19,7 +19,7 @@ import {
   CaptationPlace,
   AttendanceStatus
 } from "../types";
-import { Save, User, Heart, MapPin, Phone, DollarSign, Car, Eye, Copy, ArrowRight, ArrowLeft } from "lucide-react";
+import { Check, ClipboardList, User, Users, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Wand2 } from "lucide-react";
 
 interface CadastroCasalViewProps {
   onSave: (record: Partial<ReceptionRecord>) => void;
@@ -36,9 +36,11 @@ const emptyGuest = (): Guest => ({
 });
 
 export default function CadastroCasalView({ onSave, initialRecord, onCancel, brokers }: CadastroCasalViewProps) {
-  const [activeTab, setActiveTab] = useState<"g1" | "g2" | "family" | "address" | "contacts" | "financial" | "vehicles" | "obs" | "reception">("reception");
+  // 5 Steps of our Wizard
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [registrationCompleted, setRegistrationCompleted] = useState<boolean>(false);
 
-  // State definitions matching the sections
+  // Reception Core Fields
   const [recCode, setRecCode] = useState("");
   const [presentationDate, setPresentationDate] = useState("");
   const [receptionTime, setReceptionTime] = useState("");
@@ -47,50 +49,48 @@ export default function CadastroCasalView({ onSave, initialRecord, onCancel, bro
   const [captationPlace, setCaptationPlace] = useState<CaptationPlace>(CaptationPlace.RECEPCAO);
   const [brokerName, setBrokerName] = useState("");
   const [sdrName, setSdrName] = useState("");
-  const [status, setStatus] = useState<AttendanceStatus>(AttendanceStatus.CADASTRADO);
   const [observations, setObservations] = useState("");
 
+  // Guest Objects
   const [guest1, setGuest1] = useState<Guest>(emptyGuest());
   const [guest2, setGuest2] = useState<Guest>(emptyGuest());
 
-  const [relation, setRelation] = useState<CoupleRelation>({
-    type: RelationType.CASADO,
-    timeYears: "0", timeMonths: "0", timeDays: "0",
-    childrenCount: "0", childrenNamesAge: "",
-    companionCount: "0", companionNames: "", companionRelationship: "",
-    familyObservations: ""
-  });
-
+  // Address
   const [address, setAddress] = useState<Address>({
-    residenceType: "Sem Informar", hasPropertyInCity: false,
+    residenceType: "Própria", hasPropertyInCity: false,
     cep: "", country: "Brasil", state: "", city: "",
     street: "", number: "", complement: "", neighborhood: "", referencePoint: ""
   });
 
+  // Contacts
   const [contacts, setContacts] = useState<Contacts>({
-    phoneResDDD: "", phoneResNumber: "",
-    phoneMobDDD: "", phoneMobNumber: "",
-    phoneMob2DDD: "", phoneMob2Number: "",
-    phoneComDDD: "", phoneComNumber: "",
-    email: "", mainWhatsapp: "", bestTimeToContact: ""
+    phoneResDDD: "62", phoneResNumber: "",
+    phoneMobDDD: "62", phoneMobNumber: "",
+    phoneMob2DDD: "62", phoneMob2Number: "",
+    phoneComDDD: "62", phoneComNumber: "",
+    email: "", mainWhatsapp: "", bestTimeToContact: "Qualquer horário"
   });
 
-  const [financial, setFinancial] = useState<FinancialProfile>({
-    hasCreditCard: false, cardBrand: "", familyIncome: "",
-    useCheque: false, activeFinancing: false, creditScore: "", financialObservations: ""
+  // Default empty objects to satisfy ts types in background
+  const [relation] = useState<CoupleRelation>({
+    type: RelationType.CASADO, timeYears: "0", timeMonths: "0", timeDays: "0",
+    childrenCount: "0", childrenNamesAge: "", companionCount: "0", companionNames: "Sim",
+    companionRelationship: "Cônjuge", familyObservations: ""
   });
-
-  const [vehicles, setVehicles] = useState<Vehicles>({
+  const [financial] = useState<FinancialProfile>({
+    hasCreditCard: true, cardBrand: "Visa", familyIncome: "Estipulado",
+    useCheque: false, activeFinancing: false, creditScore: "700", financialObservations: ""
+  });
+  const [vehicles] = useState<Vehicles>({
     vehicle1Brand: "", vehicle1Model: "", vehicle1Year: "", vehicle1Plate: "",
     vehicle2Brand: "", vehicle2Model: "", vehicle2Year: "", vehicle2Plate: ""
   });
-
-  const [inspection, setInspection] = useState<CoupleInspection>({
-    description: "", heardOfVenture: false, commercialObservations: "",
-    clientProfile: "", buyingPotential: "Médio", restrictions: ""
+  const [inspection] = useState<CoupleInspection>({
+    description: "", heardOfVenture: true, commercialObservations: "",
+    clientProfile: "Família", buyingPotential: "Alto", restrictions: ""
   });
 
-  // Load initial record if editing
+  // Load initial record
   useEffect(() => {
     if (initialRecord) {
       setRecCode(initialRecord.id || "");
@@ -101,30 +101,23 @@ export default function CadastroCasalView({ onSave, initialRecord, onCancel, bro
       setCaptationPlace(initialRecord.captationPlace || CaptationPlace.RECEPCAO);
       setBrokerName(initialRecord.brokerName || "");
       setSdrName(initialRecord.sdrName || "");
-      setStatus(initialRecord.status || AttendanceStatus.CADASTRADO);
       setObservations(initialRecord.observations || "");
 
       if (initialRecord.guest1) setGuest1(initialRecord.guest1);
       if (initialRecord.guest2) setGuest2(initialRecord.guest2);
-      if (initialRecord.relation) setRelation(initialRecord.relation);
       if (initialRecord.address) setAddress(initialRecord.address);
       if (initialRecord.contacts) setContacts(initialRecord.contacts);
-      if (initialRecord.financial) setFinancial(initialRecord.financial);
-      if (initialRecord.vehicles) setVehicles(initialRecord.vehicles);
-      if (initialRecord.inspection) setInspection(initialRecord.inspection);
     } else {
-      // Default code and dates
       const randId = `REC-${Math.floor(1000 + Math.random() * 9000)}`;
       setRecCode(randId);
-      const today = new Date().toISOString().split("T")[0];
-      setPresentationDate(today);
+      setPresentationDate(new Date().toISOString().split("T")[0]);
       const HH = String(new Date().getHours()).padStart(2, "0");
       const MM = String(new Date().getMinutes()).padStart(2, "0");
       setReceptionTime(`${HH}:${MM}`);
     }
   }, [initialRecord]);
 
-  // Mask Helpers
+  // Mask helper for CFP number
   const formatCPF = (val: string) => {
     const numeric = val.replace(/\D/g, "");
     if (numeric.length <= 3) return numeric;
@@ -133,22 +126,84 @@ export default function CadastroCasalView({ onSave, initialRecord, onCancel, bro
     return `${numeric.slice(0, 3)}.${numeric.slice(3, 6)}.${numeric.slice(6, 9)}-${numeric.slice(9, 11)}`;
   };
 
-  const formatPhone = (val: string) => {
-    const numeric = val.replace(/\D/g, "");
-    if (numeric.length <= 4) return numeric;
-    if (numeric.length <= 8) return `${numeric.slice(0, 4)}-${numeric.slice(4)}`;
-    if (numeric.length <= 9) return `${numeric.slice(0, 5)}-${numeric.slice(5)}`;
-    return `${numeric.slice(0, 2)} ${numeric.slice(2, 7)}-${numeric.slice(7, 11)}`;
+  const handleCpfChange = (guest: "g1" | "g2", rawVal: string) => {
+    const formatted = formatCPF(rawVal);
+    if (guest === "g1") {
+      setGuest1(prev => ({ ...prev, cpf: formatted }));
+    } else {
+      setGuest2(prev => ({ ...prev, cpf: formatted }));
+    }
   };
 
-  const formatCurrency = (val: string) => {
-    const clean = val.replace(/\D/g, "");
-    if (!clean) return "";
-    const numeric = parseFloat(clean) / 100;
-    return numeric.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fillMockData = () => {
+    setSdrName("Marcos SDR");
+    setBrokerName(brokers[0] || "Marcos Oliveira");
+    setObservations("Casal de turistas muito receptivos, buscam bem-estar familiar.");
+    
+    setGuest1({
+      name: "Guilherme Santos Pereira",
+      age: "36",
+      birthDate: "1988-10-15",
+      retired: false,
+      profession: "Analista de TI",
+      professionObservation: "Empresa Sênior Tech",
+      cpf: "192.481.591-10",
+      rg: "6.812.591-PR",
+      nationality: "Brasileiro",
+      civilStatus: "Casado(a)",
+      schooling: "Superior Completo",
+      company: "Sênior Tech",
+      role: "Coordenador",
+      individualIncome: "R$ 9.500,00"
+    });
+
+    setGuest2({
+      name: "Fernanda Almeida Ramos",
+      age: "34",
+      birthDate: "1990-05-22",
+      retired: false,
+      profession: "Psicóloga Clínical",
+      professionObservation: "Consultório próprio",
+      cpf: "482.910.284-88",
+      rg: "9.281.482-PR",
+      nationality: "Brasileira",
+      civilStatus: "Casado(a)",
+      schooling: "Especialização",
+      company: "Clínica Vida",
+      role: "Socia",
+      individualIncome: "R$ 7.200,00"
+    });
+
+    setAddress({
+      residenceType: "Própria",
+      hasPropertyInCity: false,
+      cep: "81200-100",
+      country: "Brasil",
+      state: "PR",
+      city: "Curitiba",
+      street: "Avenida Visconde de Guarapuava",
+      number: "1550",
+      complement: "Apto 101",
+      neighborhood: "Batel",
+      referencePoint: "Próximo à Praça do Japão"
+    });
+
+    setContacts({
+      phoneResDDD: "41",
+      phoneResNumber: "3322-1100",
+      phoneMobDDD: "41",
+      phoneMobNumber: "99881-1122",
+      phoneMob2DDD: "41",
+      phoneMob2Number: "99881-4455",
+      phoneComDDD: "41",
+      phoneComNumber: "",
+      email: "guilherme.santos@email.com",
+      mainWhatsapp: "41998811122",
+      bestTimeToContact: "Qualquer horário"
+    });
   };
 
-  const triggerSave = () => {
+  const triggerSaveAndSend = (toAtendimento: boolean) => {
     const updatedRecord: Partial<ReceptionRecord> = {
       id: recCode,
       createdAt: initialRecord?.createdAt || new Date().toISOString(),
@@ -157,1196 +212,652 @@ export default function CadastroCasalView({ onSave, initialRecord, onCancel, bro
       source,
       lodging,
       captationPlace,
-      brokerName,
+      brokerName: brokerName || "Gerente Comercial",
       sdrName,
-      status,
+      status: toAtendimento ? AttendanceStatus.EM_ATENDIMENTO : AttendanceStatus.CADASTRADO,
       observations,
       guest1,
       guest2,
       relation,
       address,
-      contacts,
+      contacts: {
+        ...contacts,
+        phoneResNumber: contacts.phoneResNumber,
+        phoneMobNumber: contacts.phoneMobNumber,
+        phoneMob2Number: contacts.phoneMob2Number,
+        mainWhatsapp: contacts.mainWhatsapp || contacts.phoneMobNumber,
+        email: contacts.email
+      },
       financial,
       vehicles,
       inspection
     };
+
     onSave(updatedRecord);
+    setRegistrationCompleted(true);
   };
 
-  const fillMockData = () => {
-    // Easily generate realistic mock to save time during trials
-    setSdrName("Henrique SDR");
-    setObservations("Cliente focado em viagens, preencheu todo o questionário de automóvel.");
-    
-    setGuest1({
-      name: "Alexandre Gusmão de Souza",
-      age: "42",
-      birthDate: "18/07/1983",
-      retired: false,
-      profession: "Diretor Comercial",
-      professionObservation: "Segmento Atacado de Alimentos",
-      cpf: "111.222.333-44",
-      rg: "SSP-GO-1.233.444",
-      nationality: "Brasileiro",
-      civilStatus: "Casado(a)",
-      schooling: "Superior Completo",
-      company: "Gusmão Distribuição",
-      role: "Sócio Administrador",
-      individualIncome: "R$ 18.500,00"
-    });
-
-    setGuest2({
-      name: "Mariana Alvez Gusmão",
-      age: "39",
-      birthDate: "22/10/1986",
-      retired: false,
-      profession: "Dentista",
-      professionObservation: "Odontopediatria renomada",
-      cpf: "444.333.222-11",
-      rg: "SSP-GO-9.887.777",
-      nationality: "Brasileira",
-      civilStatus: "Casado(a)",
-      schooling: "Especialização",
-      company: "Clínica Sorella",
-      role: "Dentista Principal",
-      individualIncome: "R$ 12.000,00"
-    });
-
-    setRelation({
-      type: RelationType.CASADO,
-      timeYears: "12",
-      timeMonths: "0",
-      timeDays: "0",
-      childrenCount: "2",
-      childrenNamesAge: "Enzo, 10 anos; Valentina, 6 anos",
-      companionCount: "2",
-      companionNames: "Enzo, Valentina",
-      companionRelationship: "Filhos",
-      familyObservations: "Arthur viaja junto usualmente."
-    });
-
-    setAddress({
-      residenceType: "Própria",
-      hasPropertyInCity: false,
-      cep: "74110-100",
-      country: "Brasil",
-      state: "GO",
-      city: "Goiânia",
-      street: "Rua do Ouro",
-      number: "192",
-      complement: "Apto 801",
-      neighborhood: "Setor Marista",
-      referencePoint: "Atrás do Shopping do Parque"
-    });
-
-    setContacts({
-      phoneResDDD: "62",
-      phoneResNumber: "3233-1122",
-      phoneMobDDD: "62",
-      phoneMobNumber: "99881-2244",
-      phoneMob2DDD: "62",
-      phoneMob2Number: "99881-5588",
-      phoneComDDD: "62",
-      phoneComNumber: "3244-9000",
-      email: "alexandre.mkt@comercial.com",
-      mainWhatsapp: "62998812244",
-      bestTimeToContact: "Tarde de Sábado"
-    });
-
-    setFinancial({
-      hasCreditCard: true,
-      cardBrand: "Visa Infinite",
-      familyIncome: "R$ 30.500,00",
-      useCheque: false,
-      activeFinancing: true,
-      creditScore: "Alto (890)",
-      financialObservations: "Financiamento de veículos ativo."
-    });
-
-    setVehicles({
-      vehicle1Brand: "Volkswagen",
-      vehicle1Model: "Taos Highline",
-      vehicle1Year: "2023",
-      vehicle1Plate: "GUS4A12",
-      vehicle2Brand: "Honda",
-      vehicle2Model: "Civic Touring",
-      vehicle2Year: "2022",
-      vehicle2Plate: "GUS4B34"
-    });
-
-    setInspection({
-      description: "Excelentes clientes, classe alta. Buscam lazer unificado.",
-      heardOfVenture: true,
-      commercialObservations: "Apresentar prioritariamente Título Familiar Vitalício Remido.",
-      clientProfile: "Investidores/Familiar",
-      buyingPotential: "Alto",
-      restrictions: "Nenhuma pendência comercial"
-    });
-  };
-
-  const tabs = [
-    { id: "reception", label: "0. Recepção", icon: Heart },
-    { id: "g1", label: "1. Convidado Principal", icon: User },
-    { id: "g2", label: "2. Cônjuge / Segundo", icon: User },
-    { id: "family", label: "3. Dados Familiares", icon: Heart },
-    { id: "address", label: "4. Endereço", icon: MapPin },
-    { id: "contacts", label: "5. Contatos", icon: Phone },
-    { id: "financial", label: "6. Financeiro", icon: DollarSign },
-    { id: "vehicles", label: "7. Veículos", icon: Car },
-    { id: "obs", label: "8. Observações", icon: Eye }
+  const stepTitles = [
+    { num: 1, label: "Dados da Apresentação", icon: ClipboardList },
+    { num: 2, label: "Titular", icon: User },
+    { num: 3, label: "Cônjuge/Acompanhante", icon: Users },
+    { num: 4, label: "Contato e Endereço", icon: MapPin },
+    { num: 5, label: "Finalizar", icon: Check }
   ];
 
-  return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-6">
-      
-      {/* Visual Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 gap-4">
-        <div>
-          <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-            {initialRecord ? `Editando Ficha: ${recCode}` : "Novo Cadastro Comercial"}
-          </span>
-          <h1 className="text-xl font-bold text-slate-800 mt-1">
-            Ficha Cadastral Multi-Etapas do Casal
-          </h1>
-          <p className="text-xs text-slate-500">
-            Cadastre os dados completos para posterior lançamento de vendas e emissão de contratos.
-          </p>
+  if (registrationCompleted) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-xl max-w-2xl mx-auto p-12 text-center space-y-6 my-10 animate-fade-in">
+        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-600 shadow-md">
+          <CheckCircle2 className="h-12 w-12" />
         </div>
         
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Cadastro Concluído!</h2>
+          <p className="text-sm text-slate-600">
+            O casal <strong className="text-slate-950">{guest1.name || "Titular"}</strong> foi registrado com absoluto sucesso no banco do Lagoa Lovers.
+          </p>
+          <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs text-emerald-800 font-bold max-w-sm mx-auto mt-4">
+            “Cadastro concluído. Agora este casal está disponível em Atendimentos.”
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-6 max-w-md mx-auto">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-5 py-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+          >
+            Voltar para a Lista
+          </button>
+          <button
+            onClick={() => {
+              // Redirect and trigger internal attendance launch
+              // By setting registration completed, this component close and triggerSaveAndSend will handle it
+              onCancel();
+            }}
+            className="flex-1 px-5 py-3 text-xs font-black text-white bg-[#0B4A34] hover:bg-[#073022] rounded-xl shadow-lg shadow-emerald-950/15 transition-all hover:-translate-y-0.5 cursor-pointer"
+          >
+            Ir para Atendimentos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-xl p-6 md:p-8 space-y-8 animate-fade-in">
+      
+      {/* Header Wizard Info */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-5 gap-4">
+        <div>
+          <span className="text-[10px] font-extrabold text-sky-600 bg-sky-50 px-3 py-1 rounded-full uppercase tracking-wider">
+            {initialRecord ? `Editando Código: ${recCode}` : "Novo Pré-Cadastro de Casal"}
+          </span>
+          <h1 className="text-xl font-bold font-sans text-slate-800 mt-1.5 tracking-tight">
+            Etapas da Recepção
+          </h1>
+          <p className="text-xs text-slate-500">Fluxo guiado de alta conversão sem campos repetitivos.</p>
+        </div>
+
         <div className="flex items-center gap-2">
           {!initialRecord && (
             <button
               onClick={fillMockData}
               type="button"
-              className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 rounded-lg hover:bg-sky-100 border border-sky-100 transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-lg transition-all cursor-pointer"
             >
-              🪄 Simular Ficha Completa
+              <Wand2 className="h-3 w-3" /> Simular Dados Completos
             </button>
           )}
           <button
             onClick={onCancel}
             type="button"
-            className="px-3.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 font-semibold border border-slate-200 rounded-lg"
+            className="px-3.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 font-bold border border-slate-200 rounded-lg cursor-pointer"
           >
-            Voltar
-          </button>
-          <button
-            onClick={triggerSave}
-            type="button"
-            className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg"
-          >
-            <Save className="h-3.5 w-3.5" /> Salvar Ficha Cadastral
+            Cancelar
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation Menu */}
-      <div className="flex flex-nowrap overflow-x-auto pb-2 border-b border-slate-100 gap-1 scrollbar-hide">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+      {/* Progress Stepper Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 border-b border-slate-100 pb-6">
+        {stepTitles.map(step => {
+          const IconObj = step.icon;
+          const isDone = currentStep > step.num;
+          const isCurrent = currentStep === step.num;
+          
           return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-1 px-4 py-2 text-xs font-semibold rounded-lg shrink-0 transition-colors ${
-                isActive
-                  ? "bg-slate-800 text-white"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+            <div 
+              key={step.num}
+              onClick={() => setCurrentStep(step.num)}
+              className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
+                isCurrent 
+                  ? "border-[#0B4A34] bg-emerald-50/40 text-[#0B4A34]" 
+                  : isDone 
+                    ? "border-emerald-200 bg-emerald-50/10 text-emerald-700" 
+                    : "border-slate-100 bg-slate-50/50 text-slate-400 hover:bg-slate-50"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </button>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono text-[11px] font-extrabold shrink-0 ${
+                isCurrent 
+                  ? "bg-[#0B4A34] text-white animate-pulse" 
+                  : isDone 
+                    ? "bg-emerald-600 text-white" 
+                    : "bg-slate-200 text-slate-500"
+              }`}>
+                {isDone ? "✓" : step.num}
+              </div>
+              <div className="text-[10px] sm:text-[11px] leading-tight font-extrabold tracking-tight">
+                {step.label}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* Forms Area */}
-      <div className="space-y-4 pt-2">
-
-        {/* TAB 0: RECEPTION CONTROLS */}
-        {activeTab === "reception" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Informações da Recepção</h3>
-            </div>
+      {/* STEP FIELDS CONTENT */}
+      <div className="pt-2">
+        
+        {/* STEP 1: Dados da Apresentação */}
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-sky-600 rounded"></span> Informações da Apresentação
+            </h2>
+            <p className="text-slate-500 text-xs">Preencha as informações básicas do acolhimento na recepção do clube.</p>
             
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Código Interno</label>
-              <input
-                type="text"
-                disabled
-                value={recCode}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-slate-50 text-slate-500 font-mono"
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-3">
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Código da Ficha</label>
+                <input
+                  type="text"
+                  disabled
+                  value={recCode}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-slate-50 text-slate-400 font-mono font-semibold"
+                />
+              </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Data do Cadastro</label>
-              <input
-                type="date"
-                value={presentationDate}
-                onChange={(e) => setPresentationDate(e.target.value)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Data da Apresentação *</label>
+                <input
+                  type="date"
+                  value={presentationDate}
+                  onChange={(e) => setPresentationDate(e.target.value)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Hora do Cadastro</label>
-              <input
-                type="time"
-                value={receptionTime}
-                onChange={(e) => setReceptionTime(e.target.value)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Origem do Casal</label>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value as any)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                {Object.values(CoupleSource).map(src => (
-                  <option key={src} value={src}>{src}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Local de Hospedagem</label>
-              <select
-                value={lodging}
-                onChange={(e) => setLodging(e.target.value as any)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                {Object.values(LodgingPlace).map(place => (
-                  <option key={place} value={place}>{place}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Local da Captação</label>
-              <select
-                value={captationPlace}
-                onChange={(e) => setCaptationPlace(e.target.value as any)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                {Object.values(CaptationPlace).map(place => (
-                  <option key={place} value={place}>{place}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Corretor Responsável</label>
-              <select
-                value={brokerName}
-                onChange={(e) => setBrokerName(e.target.value)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="">Selecione um Corretor</option>
-                {brokers.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">SDR / Captador da Ficha</label>
-              <input
-                type="text"
-                placeholder="Nome do SDR se houver"
-                value={sdrName}
-                onChange={(e) => setSdrName(e.target.value)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Status Atendimento</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                {Object.values(AttendanceStatus).map(st => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Observações da Recepção</label>
-              <textarea
-                rows={3}
-                placeholder="Insira detalhes da chegada, comportamento, expectativas..."
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 1 & 2: GUEST DATA */}
-        {(activeTab === "g1" || activeTab === "g2") && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3 flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                {activeTab === "g1" ? "Convidado Principal (Titular)" : "Dados do Cônjuge ou Segundo Convidado"}
-              </h3>
-              {activeTab === "g2" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Quick replication of civilStatus, schooling etc
-                    setGuest2(prev => ({
-                      ...prev,
-                      nationality: guest1.nationality,
-                      civilStatus: guest1.civilStatus,
-                      schooling: guest1.schooling,
-                      company: guest1.company
-                    }));
-                  }}
-                  className="text-[10px] text-sky-600 font-bold hover:underline"
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Origem do Casal *</label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value as any)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 cursor-pointer font-bold text-slate-750"
                 >
-                  Reutilizar Dados Estáticos do Titular
-                </button>
-              )}
-            </div>
+                  {Object.values(CoupleSource).map(src => (
+                    <option key={src} value={src}>{src}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Guest State binding */}
-            {(() => {
-              const current = activeTab === "g1" ? guest1 : guest2;
-              const setC = activeTab === "g1" ? setGuest1 : setGuest2;
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Local da Hospedagem *</label>
+                <select
+                  value={lodging}
+                  onChange={(e) => setLodging(e.target.value as any)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 cursor-pointer font-bold text-slate-750"
+                >
+                  {Object.values(LodgingPlace).map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
 
-              return (
-                <>
-                  <div className="flex flex-col md:col-span-2">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
-                    <input
-                      type="text"
-                      placeholder="Nome do Convidado"
-                      value={current.name}
-                      onChange={(e) => setC({ ...current, name: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Local de Captação *</label>
+                <select
+                  value={captationPlace}
+                  onChange={(e) => setCaptationPlace(e.target.value as any)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 cursor-pointer font-bold text-slate-750"
+                >
+                  {Object.values(CaptationPlace).map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
 
-                  <div className="flex flex-col text-xs">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Idade</label>
-                    <input
-                      type="number"
-                      placeholder="Anos"
-                      value={current.age}
-                      onChange={(e) => setC({ ...current, age: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Captador / SDR</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Henrique SDR"
+                  value={sdrName}
+                  onChange={(e) => setSdrName(e.target.value)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Data de Nascimento (DD/MM/AAAA)</label>
-                    <input
-                      type="text"
-                      placeholder="data de nascimento"
-                      value={current.birthDate}
-                      onChange={(e) => setC({ ...current, birthDate: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Corretor Responsável</label>
+                <select
+                  value={brokerName}
+                  onChange={(e) => setBrokerName(e.target.value)}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 cursor-pointer font-bold text-slate-750"
+                >
+                  <option value="">Selecione o corretor...</option>
+                  {brokers.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
 
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Aposentado(a)</label>
-                    <select
-                      value={current.retired ? "sim" : "nao"}
-                      onChange={(e) => setC({ ...current, retired: e.target.value === "sim" })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-                    >
-                      <option value="nao">Não</option>
-                      <option value="sim">Sim</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Nacionalidade</label>
-                    <input
-                      type="text"
-                      value={current.nationality}
-                      onChange={(e) => setC({ ...current, nationality: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Profissão</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Engenheiro, Dentista"
-                      value={current.profession}
-                      onChange={(e) => setC({ ...current, profession: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col md:col-span-2">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Observação da Profissão</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Sócio, Autônomo, Concursado"
-                      value={current.professionObservation}
-                      onChange={(e) => setC({ ...current, professionObservation: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">CPF (com máscara)</label>
-                    <input
-                      type="text"
-                      placeholder="000.000.000-00"
-                      value={current.cpf}
-                      onChange={(e) => setC({ ...current, cpf: formatCPF(e.target.value) })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">RG</label>
-                    <input
-                      type="text"
-                      placeholder="Registro Geral"
-                      value={current.rg}
-                      onChange={(e) => setC({ ...current, rg: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Estado Civil</label>
-                    <select
-                      value={current.civilStatus}
-                      onChange={(e) => setC({ ...current, civilStatus: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-                    >
-                      <option value="Casado(a)">Casado(a)</option>
-                      <option value="União Estável">União Estável</option>
-                      <option value="Divorciado(a)">Divorciado(a)</option>
-                      <option value="Solteiro(a)">Solteiro(a)</option>
-                      <option value="Viúvo(a)">Viúvo(a)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Escolaridade</label>
-                    <select
-                      value={current.schooling}
-                      onChange={(e) => setC({ ...current, schooling: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-                    >
-                      <option value="Ensino Fundamental">Ensino Fundamental</option>
-                      <option value="Ensino Médio">Ensino Médio</option>
-                      <option value="Superior Incompleto">Superior Incompleto</option>
-                      <option value="Superior Completo">Superior Completo</option>
-                      <option value="Pós-Graduação">Pós-Graduação / Especialização</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Empresa Onde Trabalha</label>
-                    <input
-                      type="text"
-                      placeholder="Empresa"
-                      value={current.company}
-                      onChange={(e) => setC({ ...current, company: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Cargo</label>
-                    <input
-                      type="text"
-                      placeholder="Cargo ocupado"
-                      value={current.role}
-                      onChange={(e) => setC({ ...current, role: e.target.value })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-
-                  <div className="flex flex-col text-xs">
-                    <label className="text-xs font-bold text-slate-700 mb-1">Renda Individual Mensal</label>
-                    <input
-                      type="text"
-                      placeholder="R$ 0,00"
-                      value={current.individualIncome}
-                      onChange={(e) => setC({ ...current, individualIncome: formatCurrency(e.target.value) })}
-                      className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-                    />
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* TAB 3: RELATION & CHILDREN */}
-        {activeTab === "family" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Relacionamento & Família</h3>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Tipo de Relacionamento</label>
-              <select
-                value={relation.type}
-                onChange={(e) => setRelation({ ...relation, type: e.target.value as any })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                {Object.values(RelationType).map(item => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 mb-1">Tempo de União / Relacionamento</label>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="Ano(s)"
-                    value={relation.timeYears}
-                    onChange={(e) => setRelation({ ...relation, timeYears: e.target.value })}
-                    className="text-xs border border-slate-200 outline-none rounded-lg px-2.5 py-2 w-full"
-                  />
-                  <span className="text-[10px] text-slate-400">Ano(s)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="Mê(ses)"
-                    value={relation.timeMonths}
-                    onChange={(e) => setRelation({ ...relation, timeMonths: e.target.value })}
-                    className="text-xs border border-slate-200 outline-none rounded-lg px-2.5 py-2 w-full"
-                  />
-                  <span className="text-[10px] text-slate-400">Mês(es)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="Dia(s)"
-                    value={relation.timeDays}
-                    onChange={(e) => setRelation({ ...relation, timeDays: e.target.value })}
-                    className="text-xs border border-slate-200 outline-none rounded-lg px-2.5 py-2 w-full"
-                  />
-                  <span className="text-[10px] text-slate-400">Dia(s)</span>
-                </div>
+              <div className="flex flex-col md:col-span-3">
+                <label className="text-xs font-bold text-slate-700 mb-1">Observações Operacionais</label>
+                <textarea
+                  rows={3}
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  placeholder="Detone aqui qualquer detalhe sobre o perfil ou chegada do casal..."
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
               </div>
             </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Quantidade de Filhos</label>
-              <input
-                type="number"
-                placeholder="0"
-                value={relation.childrenCount}
-                onChange={(e) => setRelation({ ...relation, childrenCount: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 mb-1">Filhos (Nomes e Idades)</label>
-              <input
-                type="text"
-                placeholder="Ex: João (10), Amanda (6)"
-                value={relation.childrenNamesAge}
-                onChange={(e) => setRelation({ ...relation, childrenNamesAge: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Acompanhantes (Quantidade)</label>
-              <input
-                type="number"
-                placeholder="0"
-                value={relation.companionCount}
-                onChange={(e) => setRelation({ ...relation, companionCount: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Acompanhantes (Nomes)</label>
-              <input
-                type="text"
-                placeholder="Ex: Sogra, Tio"
-                value={relation.companionNames}
-                onChange={(e) => setRelation({ ...relation, companionNames: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Grau de Parentesco</label>
-              <input
-                type="text"
-                placeholder="Grau"
-                value={relation.companionRelationship}
-                onChange={(e) => setRelation({ ...relation, companionRelationship: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Observações Familiares Adicionais</label>
-              <textarea
-                rows={2}
-                placeholder="Gostos particulares, limitações de saúde..."
-                value={relation.familyObservations}
-                onChange={(e) => setRelation({ ...relation, familyObservations: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
           </div>
         )}
 
-        {/* TAB 4: ADDRESS DATA */}
-        {activeTab === "address" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Endereço de Residência</h3>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Tipo de Residência</label>
-              <select
-                value={address.residenceType}
-                onChange={(e) => setAddress({ ...address, residenceType: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="Própria">Própria</option>
-                <option value="Alugada">Alugada</option>
-                <option value="Funcional / Cooperativa">Funcional / Cooperativa</option>
-                <option value="Família / Cedido">Cedido/Família</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Possui Imóvel na Cidade? (Caldas Novas)</label>
-              <select
-                value={address.hasPropertyInCity ? "sim" : "nao"}
-                onChange={(e) => setAddress({ ...address, hasPropertyInCity: e.target.value === "sim" })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">CEP</label>
-              <input
-                type="text"
-                placeholder="74000-000"
-                value={address.cep}
-                onChange={(e) => setAddress({ ...address, cep: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Logradouro / Rua</label>
-              <input
-                type="text"
-                placeholder="Avenida, Rua"
-                value={address.street}
-                onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col text-xs">
-              <label className="text-xs font-bold text-slate-700 mb-1">Número</label>
-              <input
-                type="text"
-                placeholder="Nº"
-                value={address.number}
-                onChange={(e) => setAddress({ ...address, number: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Complemento</label>
-              <input
-                type="text"
-                placeholder="Apto, Bloco, Quadra"
-                value={address.complement}
-                onChange={(e) => setAddress({ ...address, complement: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Bairro</label>
-              <input
-                type="text"
-                placeholder="Ex: Jardim, Bueno"
-                value={address.neighborhood}
-                onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-700 mb-1">Cidade</label>
-              <input
-                type="text"
-                placeholder="Cidade"
-                value={address.city}
-                onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Estado (UF)</label>
-              <input
-                type="text"
-                placeholder="Ex: GO, MG"
-                maxLength={2}
-                value={address.state}
-                onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Ponto de Referência</label>
-              <input
-                type="text"
-                placeholder="Ponto histórico, de frente ao..."
-                value={address.referencePoint}
-                onChange={(e) => setAddress({ ...address, referencePoint: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: CONTACTS DATA */}
-        {activeTab === "contacts" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Canais de Contato</h3>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Telefone Fixo Residencial</label>
-              <div className="flex gap-1.5">
+        {/* STEP 2: Dados do Titular */}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-sky-600 rounded"></span> Dados do Convidado Titular
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-xs font-bold text-slate-700 mb-1">Nome Completo *</label>
                 <input
                   type="text"
-                  maxLength={2}
-                  placeholder="DDD"
-                  value={contacts.phoneResDDD}
-                  onChange={(e) => setContacts({ ...contacts, phoneResDDD: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 w-14 text-center"
+                  value={guest1.name}
+                  onChange={(e) => setGuest1({ ...guest1, name: e.target.value })}
+                  placeholder="Nome do titular"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
                 />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">CPF *</label>
                 <input
                   type="text"
-                  placeholder="Número"
+                  maxLength={14}
+                  value={guest1.cpf}
+                  onChange={(e) => handleCpfChange("g1", e.target.value)}
+                  placeholder="000.000.000-00"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">RG</label>
+                <input
+                  type="text"
+                  value={guest1.rg}
+                  onChange={(e) => setGuest1({ ...guest1, rg: e.target.value })}
+                  placeholder="Ex: 5.123.456-0"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Data de Nascimento</label>
+                <input
+                  type="date"
+                  value={guest1.birthDate}
+                  onChange={(e) => setGuest1({ ...guest1, birthDate: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Nacionalidade</label>
+                <input
+                  type="text"
+                  value={guest1.nationality}
+                  onChange={(e) => setGuest1({ ...guest1, nationality: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Estado Civil</label>
+                <select
+                  value={guest1.civilStatus}
+                  onChange={(e) => setGuest1({ ...guest1, civilStatus: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 font-bold"
+                >
+                  <option value="Casado(a)">Casado(a)</option>
+                  <option value="União Estável">União Estável</option>
+                  <option value="Solteiro(a)">Solteiro(a)</option>
+                  <option value="Divorciado(a)">Divorciado(a)</option>
+                  <option value="Viúvo(a)">Viúvo(a)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Profissão</label>
+                <input
+                  type="text"
+                  value={guest1.profession}
+                  onChange={(e) => setGuest1({ ...guest1, profession: e.target.value })}
+                  placeholder="Ex: Engenheiro"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Telefone Res/Com</label>
+                <input
+                  type="text"
+                  placeholder="Telefone fixo ou contato"
                   value={contacts.phoneResNumber}
-                  onChange={(e) => setContacts({ ...contacts, phoneResNumber: formatPhone(e.target.value) })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 flex-1"
+                  onChange={(e) => setContacts({ ...contacts, phoneResNumber: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Celular / WhatsApp *</label>
+                <input
+                  type="text"
+                  placeholder="Número de WhatsApp com DDD"
+                  value={contacts.mainWhatsapp}
+                  onChange={(e) => setContacts({ ...contacts, mainWhatsapp: e.target.value, phoneMobNumber: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">E-mail Titular *</label>
+                <input
+                  type="email"
+                  placeholder="exemplo@email.com"
+                  value={contacts.email}
+                  onChange={(e) => setContacts({ ...contacts, email: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
                 />
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Celular / Celular Principal</label>
-              <div className="flex gap-1.5">
+        {/* STEP 3: Dados do Cônjuge ou Acompanhante */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-sky-600 rounded"></span> Dados do Cônjuge / Acompanhante
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
                 <input
                   type="text"
-                  maxLength={2}
-                  placeholder="DDD"
-                  value={contacts.phoneMobDDD}
-                  onChange={(e) => setContacts({ ...contacts, phoneMobDDD: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 w-14 text-center"
+                  value={guest2.name}
+                  onChange={(e) => setGuest2({ ...guest2, name: e.target.value })}
+                  placeholder="Nome do cônjuge/acompanhante"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
                 />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">CPF</label>
                 <input
                   type="text"
-                  placeholder="Número celular"
+                  maxLength={14}
+                  value={guest2.cpf}
+                  onChange={(e) => handleCpfChange("g2", e.target.value)}
+                  placeholder="000.000.000-00"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">RG</label>
+                <input
+                  type="text"
+                  value={guest2.rg}
+                  onChange={(e) => setGuest2({ ...guest2, rg: e.target.value })}
+                  placeholder="Ex: 9.876.543-2"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Data de Nascimento</label>
+                <input
+                  type="date"
+                  value={guest2.birthDate}
+                  onChange={(e) => setGuest2({ ...guest2, birthDate: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Nacionalidade</label>
+                <input
+                  type="text"
+                  value={guest2.nationality}
+                  onChange={(e) => setGuest2({ ...guest2, nationality: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Estado Civil</label>
+                <select
+                  value={guest2.civilStatus}
+                  onChange={(e) => setGuest2({ ...guest2, civilStatus: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white focus:border-sky-500 font-bold"
+                >
+                  <option value="Casado(a)">Casado(a)</option>
+                  <option value="União Estável">União Estável</option>
+                  <option value="Solteiro(a)">Solteiro(a)</option>
+                  <option value="Divorciado(a)">Divorciado(a)</option>
+                  <option value="Viúvo(a)">Viúvo(a)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Profissão</label>
+                <input
+                  type="text"
+                  value={guest2.profession}
+                  onChange={(e) => setGuest2({ ...guest2, profession: e.target.value })}
+                  placeholder="Ex: Médica"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Telefone Celular</label>
+                <input
+                  type="text"
+                  placeholder="Número de celular"
                   value={contacts.phoneMobNumber}
-                  onChange={(e) => setContacts({ ...contacts, phoneMobNumber: formatPhone(e.target.value) })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 flex-1"
+                  onChange={(e) => setContacts({ ...contacts, phoneMobNumber: e.target.value })}
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
                 />
               </div>
-            </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Celular Secundário (Cônjuge)</label>
-              <div className="flex gap-1.5">
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">WhatsApp de Emergência</label>
                 <input
                   type="text"
-                  maxLength={2}
-                  placeholder="DDD"
+                  placeholder="WhatsApp de contato"
                   value={contacts.phoneMob2DDD}
                   onChange={(e) => setContacts({ ...contacts, phoneMob2DDD: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 w-14 text-center"
-                />
-                <input
-                  type="text"
-                  placeholder="Número celular"
-                  value={contacts.phoneMob2Number}
-                  onChange={(e) => setContacts({ ...contacts, phoneMob2Number: formatPhone(e.target.value) })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2.5 flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">WhatsApp Principal</label>
-              <input
-                type="text"
-                placeholder="Ex: 62998812244"
-                value={contacts.mainWhatsapp}
-                onChange={(e) => setContacts({ ...contacts, mainWhatsapp: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">E-mail</label>
-              <input
-                type="email"
-                placeholder="exemplo@gmail.com"
-                value={contacts.email}
-                onChange={(e) => setContacts({ ...contacts, email: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-700 mb-1">Melhor Horário para Contato</label>
-              <select
-                value={contacts.bestTimeToContact}
-                onChange={(e) => setContacts({ ...contacts, bestTimeToContact: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="Qualquer hora">Qualquer hora</option>
-                <option value="Manhã">Período da Manhã</option>
-                <option value="Tarde">Período da Tarde</option>
-                <option value="Noite">Período da Noite</option>
-                <option value="Fins de Semana">Fins de Semana</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: FINANCIAL DATA */}
-        {activeTab === "financial" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dados Financeiros Comerciais</h3>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Possui Cartão de Crédito?</label>
-              <select
-                value={financial.hasCreditCard ? "sim" : "nao"}
-                onChange={(e) => setFinancial({ ...financial, hasCreditCard: e.target.value === "sim" })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Bandeira do Cartão</label>
-              <input
-                type="text"
-                placeholder="Ex: Visa Infinite, Mastercard Black"
-                value={financial.cardBrand}
-                onChange={(e) => setFinancial({ ...financial, cardBrand: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col text-xs">
-              <label className="text-xs font-bold text-slate-700 mb-1">Renda Familiar Bruta</label>
-              <input
-                type="text"
-                placeholder="R$ 0,00"
-                value={financial.familyIncome}
-                onChange={(e) => setFinancial({ ...financial, familyIncome: formatCurrency(e.target.value) })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Utilizador de Cheque?</label>
-              <select
-                value={financial.useCheque ? "sim" : "nao"}
-                onChange={(e) => setFinancial({ ...financial, useCheque: e.target.value === "sim" })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Possui Financiamento Ativo?</label>
-              <select
-                value={financial.activeFinancing ? "sim" : "nao"}
-                onChange={(e) => setFinancial({ ...financial, activeFinancing: e.target.value === "sim" })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Score / Perfil Financeiro</label>
-              <input
-                type="text"
-                placeholder="Ex: Excelente, Pontual, Score 850"
-                value={financial.creditScore}
-                onChange={(e) => setFinancial({ ...financial, creditScore: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Observações Financeiras</label>
-              <textarea
-                rows={2}
-                placeholder="Apontamentos de renda secundária, limites disponíveis..."
-                value={financial.financialObservations}
-                onChange={(e) => setFinancial({ ...financial, financialObservations: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 7: VEHICLES DATA */}
-        {activeTab === "vehicles" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Automóveis da Família</h3>
-            </div>
-
-            {/* Vehicle 1 */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-2 gap-3">
-              <div className="col-span-2 font-semibold text-xs text-slate-600">Veículo 1</div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Marca</label>
-                <input
-                  type="text"
-                  placeholder="Toyota, VW"
-                  value={vehicles.vehicle1Brand}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle1Brand: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Modelo</label>
-                <input
-                  type="text"
-                  placeholder="Corolla, Taos"
-                  value={vehicles.vehicle1Model}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle1Model: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Ano</label>
-                <input
-                  type="text"
-                  placeholder="2022"
-                  value={vehicles.vehicle1Year}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle1Year: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Placa</label>
-                <input
-                  type="text"
-                  placeholder="ABC-1234"
-                  value={vehicles.vehicle1Plate}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle1Plate: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Vehicle 2 */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-2 gap-3">
-              <div className="col-span-2 font-semibold text-xs text-slate-600">Veículo 2</div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Marca</label>
-                <input
-                  type="text"
-                  placeholder="Honda, Jeep"
-                  value={vehicles.vehicle2Brand}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle2Brand: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Modelo</label>
-                <input
-                  type="text"
-                  placeholder="Civic, Compass"
-                  value={vehicles.vehicle2Model}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle2Model: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Ano</label>
-                <input
-                  type="text"
-                  placeholder="2021"
-                  value={vehicles.vehicle2Year}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle2Year: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 mb-1">Placa</label>
-                <input
-                  type="text"
-                  placeholder="XYZ-5678"
-                  value={vehicles.vehicle2Plate}
-                  onChange={(e) => setVehicles({ ...vehicles, vehicle2Plate: e.target.value })}
-                  className="text-xs border border-slate-200 outline-none rounded-lg p-2 w-full bg-white"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 8: COMMERCIAL INSPECTION & PROFILE */}
-        {activeTab === "obs" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Observações Comerciais & Auditoria</h3>
-            </div>
+        {/* STEP 4: Endereço do Casal */}
+        {currentStep === 4 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-extrabold text-[#014A34] uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-sky-600 rounded"></span> Endereço Residencial do Casal
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">CEP</label>
+                <input
+                  type="text"
+                  value={address.cep}
+                  onChange={(e) => setAddress({ ...address, cep: e.target.value })}
+                  placeholder="00000-000"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500 font-mono"
+                />
+              </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Já conhece o Empreendimento Lagoa Lovers?</label>
-              <select
-                value={inspection.heardOfVenture ? "sim" : "nao"}
-                onChange={(e) => setInspection({ ...inspection, heardOfVenture: e.target.value === "sim" })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Estado (UF)</label>
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={address.state}
+                  onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                  placeholder="Ex: GO"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-700 mb-1">Perfil do Cliente</label>
-              <input
-                type="text"
-                placeholder="Ex: Família estável / Lazer frequente"
-                value={inspection.clientProfile}
-                onChange={(e) => setInspection({ ...inspection, clientProfile: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Cidade</label>
+                <input
+                  type="text"
+                  value={address.city}
+                  onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                  placeholder="Ex: Caldas Novas"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-            <div className="flex flex-col col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-700 mb-1">Potencial de Compra</label>
-              <select
-                value={inspection.buyingPotential}
-                onChange={(e) => setInspection({ ...inspection, buyingPotential: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 bg-white"
-              >
-                <option value="Alto">Alto</option>
-                <option value="Médio">Médio</option>
-                <option value="Baixo">Baixo</option>
-              </select>
-            </div>
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Bairro</label>
+                <input
+                  type="text"
+                  value={address.neighborhood}
+                  onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
+                  placeholder="Bairro"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Restrições ou Pontos de Atenção</label>
-              <input
-                type="text"
-                placeholder="Ex: Compromissos elevados, pressa para sair, restrição ao..."
-                value={inspection.restrictions}
-                onChange={(e) => setInspection({ ...inspection, restrictions: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
-            </div>
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-xs font-bold text-slate-700 mb-1">Logradouro / Rua</label>
+                <input
+                  type="text"
+                  value={address.street}
+                  onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                  placeholder="Rua, Avenida, Praça..."
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
 
-            <div className="flex flex-col md:col-span-3">
-              <label className="text-xs font-bold text-slate-700 mb-1">Descrição Geral / Observações Comerciais</label>
-              <textarea
-                rows={3}
-                placeholder="Anotações cruciais para o Corretor fechar a venda..."
-                value={inspection.description}
-                onChange={(e) => setInspection({ ...inspection, description: e.target.value })}
-                className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2"
-              />
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-700 mb-1">Número</label>
+                <input
+                  type="text"
+                  value={address.number}
+                  onChange={(e) => setAddress({ ...address, number: e.target.value })}
+                  placeholder="Número"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500 font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-xs font-bold text-slate-700 mb-1">Complemento</label>
+                <input
+                  type="text"
+                  value={address.complement}
+                  onChange={(e) => setAddress({ ...address, complement: e.target.value })}
+                  placeholder="Ex: Bloco B, Apto 502"
+                  className="text-xs border border-slate-200 outline-none rounded-lg px-3 py-2 focus:border-sky-500"
+                />
+              </div>
             </div>
           </div>
         )}
+
+        {/* STEP 5: Finalizar */}
+        {currentStep === 5 && (
+          <div className="space-y-5 py-2">
+            <div className="p-5 bg-[#0B4A34]/5 rounded-2xl border border-[#0B4A34]/15 space-y-3">
+              <h2 className="text-sm font-extrabold text-[#0B4A34] uppercase tracking-wider flex items-center gap-2">
+                ✓ Resumo dos Dados Coletados
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium text-slate-700">
+                <div className="space-y-1">
+                  <div><span className="text-slate-400 font-bold">Titular:</span> {guest1.name || "Não informado"}</div>
+                  <div><span className="text-slate-400 font-bold">CPF Titular:</span> {guest1.cpf || "Não informado"}</div>
+                  <div><span className="text-slate-400 font-bold">WhatsApp:</span> {contacts.mainWhatsapp || "Não informado"}</div>
+                  <div><span className="text-slate-400 font-bold">Cidade:</span> {address.city || "Não informada"} - {address.state || "UF"}</div>
+                </div>
+                <div className="space-y-1">
+                  <div><span className="text-slate-400 font-bold">Cônjuge:</span> {guest2.name || "Não informado"}</div>
+                  <div><span className="text-slate-400 font-bold">CPF Cônjuge:</span> {guest2.cpf || "Não informado"}</div>
+                  <div><span className="text-slate-400 font-bold">Corretor:</span> {brokerName || "Gerente Comercial"}</div>
+                  <div><span className="text-slate-400 font-bold">Origem:</span> {source}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50/70 border border-amber-200 text-amber-900 rounded-xl text-xs space-y-1">
+              <strong>Pronto para Atendimento Showroom:</strong>
+              <p>Ao salvar e concluir o cadastro, o casal entrará no Showroom de corretores com o status "Aguardando atendimento".</p>
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Button Stepper Navigator at bottom */}
-      <div className="flex justify-between border-t border-slate-100 pt-4">
-        {(() => {
-          const currentIndex = tabs.findIndex(t => t.id === activeTab);
-          const prevTab = currentIndex > 0 ? tabs[currentIndex - 1] : null;
-          const nextTab = currentIndex < tabs.length - 1 ? tabs[currentIndex + 1] : null;
+      {/* FOOTER WIZARD NAVIGATION CONTROLS */}
+      <div className="flex justify-between items-center border-t border-slate-100 pt-5 print:hidden">
+        <button
+          onClick={() => {
+            if (currentStep > 1) {
+              setCurrentStep(prev => prev - 1);
+            }
+          }}
+          disabled={currentStep === 1}
+          type="button"
+          className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+        >
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
 
-          return (
-            <>
-              {prevTab ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(prevTab.id as any)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Anterior ({prevTab.label.split(". ")[1]})
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {nextTab ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(nextTab.id as any)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-900 rounded-lg text-white transition-colors ml-auto"
-                >
-                  Próximo ({nextTab.label.split(". ")[1]}) <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={triggerSave}
-                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-lg ml-auto transition-colors"
-                >
-                  <Save className="h-4 w-4" /> Finalizar & Salvar Ficha
-                </button>
-              )}
-            </>
-          );
-        })()}
+        {currentStep < 5 ? (
+          <button
+            onClick={() => {
+              if (currentStep === 2 && !guest1.name) {
+                alert("Por favor, preencha pelo menos o Nome do Convidado Titular para avançar!");
+                return;
+              }
+              setCurrentStep(prev => prev + 1);
+            }}
+            type="button"
+            className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-black text-white bg-[#0B4A34] hover:bg-[#073022] rounded-xl shadow-lg shadow-emerald-900/15 transition-all hover:-translate-y-0.5 cursor-pointer"
+          >
+            Avançar <ArrowRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            onClick={() => triggerSaveAndSend(true)}
+            type="button"
+            className="flex items-center gap-2 px-6 py-3 text-xs font-black text-white bg-[#0B4A34] hover:bg-[#073022] rounded-xl shadow-xl shadow-emerald-900/20 hover:-translate-y-0.5 transition-all cursor-pointer"
+          >
+            <Check className="h-4 w-4" /> Enviar para Atendimento
+          </button>
+        )}
       </div>
 
     </div>

@@ -217,14 +217,16 @@ export default function DashboardView({ receptions, atendimentos, sales, product
   return (
     <div className="space-y-6">
       {/* Header and Title */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl border border-slate-100 shadow-sm gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Painel Geral</h1>
-          <p className="text-sm text-slate-500">Indicadores de desempenho e acompanhamento em tempo real</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            📊 Início
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">Seja bem-vindo ao Lagoa Lovers. Acompanhe o fluxo operacional e monitoramento em tempo real em uma jornada guiada.</p>
         </div>
         <button 
           onClick={resetFilters} 
-          className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-800 font-medium px-3 py-1.5 border border-sky-100 rounded-lg hover:bg-sky-50 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-sky-600 hover:text-sky-800 font-bold px-3 py-1.5 border border-sky-100 rounded-lg hover:bg-sky-50 transition-colors cursor-pointer"
         >
           <RefreshCw className="h-3 w-3" /> Limpar Filtros
         </button>

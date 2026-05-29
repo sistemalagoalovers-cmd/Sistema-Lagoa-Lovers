@@ -136,8 +136,12 @@ export default function RecepcaoView({
           {/* Header controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Recepção de Casais</h1>
-              <p className="text-sm text-slate-500">Cadastre e monitore os convidados antes do atendimento de vendas</p>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                👥 Recepção
+              </h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Cadastre aqui o casal que chegou para apresentação. Depois do cadastro, envie o cliente para atendimento.
+              </p>
             </div>
             <button
               onClick={handleNew}

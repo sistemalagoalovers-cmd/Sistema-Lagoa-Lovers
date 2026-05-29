@@ -94,10 +94,12 @@ export default function AtendimentoView({
     <div className="space-y-6">
       
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl border border-slate-100 shadow-sm gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Showroom / Atendimento</h1>
-          <p className="text-sm text-slate-500">Acompanhamento e registro de apresentações de vendas conduzidas pelos corretores</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            🤝 Atendimentos
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">Acompanhe aqui os casais em apresentação e registre o resultado do atendimento.</p>
         </div>
         
         <button

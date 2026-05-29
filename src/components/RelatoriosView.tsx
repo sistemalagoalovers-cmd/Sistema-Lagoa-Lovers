@@ -174,10 +174,12 @@ export default function RelatoriosView({ receptions, sales, atendimentos }: Rela
     <div className="space-y-6">
       
       {/* Title block */}
-      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Relatórios & Auditoria</h1>
-          <p className="text-sm text-slate-500">Gere demonstrativos, monitore SDRs e extraia fluxos financeiros da empresa</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            📊 Relatórios
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">Analise os indicadores simplificados de desempenho, conversão e emissões.</p>
         </div>
 
         {/* Date Filter Bar */}
@@ -205,35 +207,35 @@ export default function RelatoriosView({ receptions, sales, atendimentos }: Rela
       <div className="flex border-b border-slate-200 text-xs font-bold bg-white p-1 rounded-xl">
         <button
           onClick={() => setActiveTab("recepcao")}
-          className={`flex-1 py-2.5 text-center rounded-lg transition-colors capitalize ${
-            activeTab === "recepcao" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"
+          className={`flex-1 py-2.5 text-center rounded-lg transition-colors cursor-pointer ${
+            activeTab === "recepcao" ? "bg-[#0B4A34] text-white" : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          📁 Recepção & SDRs
+          📋 Relatório de Recepção
         </button>
         <button
           onClick={() => setActiveTab("corretores")}
-          className={`flex-1 py-2.5 text-center rounded-lg transition-colors capitalize ${
-            activeTab === "corretores" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"
+          className={`flex-1 py-2.5 text-center rounded-lg transition-colors cursor-pointer ${
+            activeTab === "corretores" ? "bg-[#0B4A34] text-white" : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          🏆 Conversão de Corretores
+          🤝 Relatório de Atendimento
         </button>
         <button
           onClick={() => setActiveTab("vendas")}
-          className={`flex-1 py-2.5 text-center rounded-lg transition-colors capitalize ${
-            activeTab === "vendas" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"
+          className={`flex-1 py-2.5 text-center rounded-lg transition-colors cursor-pointer ${
+            activeTab === "vendas" ? "bg-[#0B4A34] text-white" : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          🏷️ Vendas & Produtos
+          💰 Relatório de Vendas
         </button>
         <button
           onClick={() => setActiveTab("financeiro")}
-          className={`flex-1 py-2.5 text-center rounded-lg transition-colors capitalize ${
-            activeTab === "financeiro" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"
+          className={`flex-1 py-2.5 text-center rounded-lg transition-colors cursor-pointer ${
+            activeTab === "financeiro" ? "bg-[#0B4A34] text-white" : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          💰 Fluxo Financeiro
+          📄 Relatório de Contratos
         </button>
       </div>
 

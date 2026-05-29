@@ -110,10 +110,12 @@ export default function ProdutosView({ products, onSaveProduct }: ProdutosViewPr
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl border border-slate-100 shadow-sm gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Tabela de Produtos</h1>
-          <p className="text-sm text-slate-500">Cadastre e configure títulos de lazer vitalício, faixas de preços e regulamentos de diárias</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            🏷️ Produtos
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">Consulte e gerencie a tabela de produtos e planos integrados do empreendimento.</p>
         </div>
         
         <button

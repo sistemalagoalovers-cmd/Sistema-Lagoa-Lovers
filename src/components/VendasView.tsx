@@ -300,10 +300,12 @@ export default function VendasView({
       
       {/* Header controls list */}
       {!isCreating && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl border border-slate-100 shadow-sm gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Lançamento de Vendas</h1>
-            <p className="text-sm text-slate-500">Registre propostas, defina planos de parcelamento e gerencie anuidades</p>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              💰 Vendas
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">Lance aqui a venda usando um atendimento já cadastrado ou criando uma venda avulsa.</p>
           </div>
           <div className="flex gap-2">
             <button

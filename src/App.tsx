@@ -28,8 +28,7 @@ import VendasView from "./components/VendasView";
 import ProdutosView from "./components/ProdutosView";
 import ContratosView from "./components/ContratosView";
 import RelatoriosView from "./components/RelatoriosView";
-import UsuariosView from "./components/UsuariosView";
-import SupabaseSyncView from "./components/SupabaseSyncView";
+import ConfiguracoesView from "./components/ConfiguracoesView";
 
 // Icons 
 import { 
@@ -64,7 +63,7 @@ export default function App() {
   const [templates, setTemplates] = useState<ContractTemplate[]>(initialState.templates);
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState<"dashboard" | "recepcao" | "atendimento" | "vendas" | "produtos" | "contratos" | "relatorios" | "usuarios" | "supabase">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "recepcao" | "atendimento" | "vendas" | "contratos" | "produtos" | "relatorios" | "configuracoes">("dashboard");
 
   // Inter-tab redirection buffers
   const [salePreSelectClient, setSalePreSelectClient] = useState<string | null>(null);
@@ -240,9 +239,7 @@ export default function App() {
         return [UserRole.FINANCEIRO, UserRole.GERENTE, UserRole.CORRETOR].includes(role);
       case "relatorios":
         return [UserRole.GERENTE, UserRole.FINANCEIRO].includes(role);
-      case "usuarios":
-        return false; // Admins only
-      case "supabase":
+      case "configuracoes":
         return [UserRole.ADMIN, UserRole.GERENTE, UserRole.FINANCEIRO].includes(role);
       default:
         return false;
@@ -283,15 +280,14 @@ export default function App() {
         {/* Main navigation menu */}
         <nav className="flex-1 p-4 space-y-1">
           {[
-            { id: "dashboard", label: "Dashboard Geral", icon: LayoutDashboard },
-            { id: "recepcao", label: "Controle Recepção", icon: Users },
-            { id: "atendimento", label: "Showroom Atendimentos", icon: PlaySquare },
-            { id: "vendas", label: "Ficha de Vendas", icon: ShoppingBag },
-            { id: "produtos", label: "Tabela de Produtos", icon: Tag },
-            { id: "contratos", label: "Emissão Contratos", icon: FileSignature },
-            { id: "relatorios", label: "Planilhas & Relatórios", icon: BarChart2 },
-            { id: "usuarios", label: "Acessos e Permissões", icon: Key },
-            { id: "supabase", label: "Sincronia Supabase", icon: Database }
+            { id: "dashboard", label: "Início", icon: LayoutDashboard },
+            { id: "recepcao", label: "Recepção", icon: Users },
+            { id: "atendimento", label: "Atendimentos", icon: PlaySquare },
+            { id: "vendas", label: "Vendas", icon: ShoppingBag },
+            { id: "contratos", label: "Contratos", icon: FileSignature },
+            { id: "produtos", label: "Produtos", icon: Tag },
+            { id: "relatorios", label: "Relatórios", icon: BarChart2 },
+            { id: "configuracoes", label: "Configurações", icon: Key }
           ].map(item => {
             const isTabActive = activeTab === item.id;
             const isAllowed = hasAccess(item.id as any);
@@ -465,24 +461,17 @@ export default function App() {
             />
           )}
 
-          {/* Usuarios Module */}
-          {activeTab === "usuarios" && (
-            <UsuariosView
+          {/* Configurações Module */}
+          {activeTab === "configuracoes" && (
+            <ConfiguracoesView
               users={users}
               onSaveUser={handleSaveUser}
               onDeleteUser={handleDeleteUser}
-            />
-          )}
-
-          {/* Supabase Sync Module */}
-          {activeTab === "supabase" && (
-            <SupabaseSyncView
               receptions={receptions}
               atendimentos={atendimentos}
               sales={sales}
               contracts={contracts}
               products={products}
-              users={users}
               templates={templates}
               onLoadAllData={handleLoadAllData}
             />

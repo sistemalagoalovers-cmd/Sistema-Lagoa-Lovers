@@ -1141,9 +1141,9 @@ export default function ContratosView({
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            <span className="p-1 px-2.5 bg-[#0B4A34] text-white rounded-lg text-sm font-mono">LL</span> Emissão de Contratos
+            📄 Contratos
           </h1>
-          <p className="text-xs text-slate-500">Geração de contratos por sobreposição de coordenadas em PDF imutável padrão original.</p>
+          <p className="text-xs text-slate-500 mt-1">Gere o contrato automaticamente com base na venda realizada.</p>
         </div>
 
         {/* Navigation sub-tabs */}
