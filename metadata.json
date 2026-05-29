@@ -1,0 +1,6 @@
+{
+  "name": "Lagoa Lovers",
+  "description": "Sistema completo para controle de recepção, cadastro de casal, atendimento de corretores, lançamento de vendas e geração de contratos do empreendimento Lagoa Lovers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
